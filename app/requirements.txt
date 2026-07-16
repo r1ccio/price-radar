@@ -1,0 +1,5 @@
+Django~=5.2.0
+djangorestframework~=3.16.0
+psycopg[binary]~=3.3.3
+python-dotenv~=1.2.2
+gunicorn==21.2.0

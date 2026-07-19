@@ -11,7 +11,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-
+  redis:
+    image: redis:7-alpine
+    container_name: price_radar_redis
+    restart: always
+    ports: 
+      - "6379:6379"
   web:
     build: ./app
     container_name: price_radar_web
@@ -24,6 +29,18 @@ services:
       - .env
     depends_on:
       - db
+  celery_worker:
+    build: ./app
+    container_name: price_radar_celery_worker
+    command: celery -A core worker -l info
+    volumes:
+      - ./app:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - web
 
 volumes:
   postgres_data:

@@ -3,7 +3,39 @@ from curl_cffi import requests
 from bs4 import BeautifulSoup
 from celery import shared_task
 from django.utils import timezone
+from django.conf import settings
 from .models import Target, PriceHistory
+
+
+def send_telegram_notification(chat_id, title, url, current_price, target_price):
+    token = settings.TELEGRAM_BOT_TOKEN
+    if not token or not chat_id:
+        return False
+
+    api_url=f'https://api.telegram.org/bot{token}/sendMessage'
+
+    text = (
+        f"🔥 **Price lowered!**\n\n"
+        f"📦 **Item:** <a href='{url}'>{title or 'Item URL'}</a>\n"
+        f"💰 **Current price:** {current_price}\n"
+        f"🎯 **Your target:** {target_price}\n\n"
+        f"⚡ <i>Hurry up! Buy it before price goes up again!</i>"
+    )
+
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": False
+    }
+
+    try:
+        response = requests.post(api_url, json=payload, timeout=5)
+        response.raise_for_status()
+        return True
+    except Exception as e:
+        print(f"Failde to send Telegram alert: {e}")
+        return False
 
 @shared_task
 def parse_target_price(target_id):
@@ -54,6 +86,8 @@ def parse_target_price(target_id):
                     continue
 
     if price:
+        old_price = target.current_price
+
         target.current_price = price
         target.save(update_fields=['title', 'current_price', 'updated_at'])
 
@@ -61,6 +95,16 @@ def parse_target_price(target_id):
             target=target,
             price=price
         )
+
+        if price <= target.target_price and target.telegram_chat_id:
+            send_telegram_notification(
+                chat_id=target.telegram_chat_id,
+                title=target.title,
+                url=target.url,
+                current_price=price,
+                target_price=target.target_price
+            )
+
         return f"SuccessFully updated Target #{target.id}: new price is {price}"
     
     if target.title:

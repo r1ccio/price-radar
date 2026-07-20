@@ -9,9 +9,11 @@ class Target (models.Model):
     title = models.CharField(max_length=200, blank=True, verbose_name='Item Title')
     current_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Current Price')
     target_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Target Price')
+    telegram_chat_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="Telegram Chat ID for notifications")
     is_active = models.BooleanField(default=True, verbose_name='Is Active')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Creation Date')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Last Updation Date')
+
 
     class Meta:
         verbose_name = 'Target'

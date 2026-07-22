@@ -111,3 +111,14 @@ def parse_target_price(target_id):
         target.save(update_fields=['title', 'updated_at'])
 
     return f"Could not extract price for Target #{target.id}"
+
+@shared_task
+def check_all_active_targets():
+    active_targets = Target.objects.filter(is_active=True)
+    count = 0
+
+    for target in active_targets:
+        parse_target_price.delay(target.id)
+        count += 1
+
+    return f"Dispatched {count} active targets for price checking."

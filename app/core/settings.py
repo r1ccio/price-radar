@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from celery.schedules import crontab
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -134,6 +135,12 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERUALIZER = 'json'
+CELERY_BEAT_SCHEDULE = {
+    'check-active-prices-schedule':{
+        'task': 'tracker.tasks.check_all_active_targets',
+        'schedule': crontab(minute='*/1')
+    }
+}
 
 # Telegram settings
 TELEGRAM_BOT_TOKEN=os.environ.get('TELEGRAM_BOT_TOKEN', '')

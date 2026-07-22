@@ -41,6 +41,19 @@ services:
       - db
       - redis
       - web
+  celery_beat:
+    build: ./app
+    container_name: price_radar_celery_beat
+    command: celery -A core beat -l info
+    volumes:
+      - ./app:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - web
+
 
 volumes:
   postgres_data:

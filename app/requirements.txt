@@ -8,3 +8,4 @@ redis~=5.0.0
 requests~=2.32
 beautifulsoup4~=4.13.2
 curl-cffi>=0.7, <0.8
+gunicorn>=21.2, <22.0

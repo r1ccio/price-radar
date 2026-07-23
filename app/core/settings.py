@@ -123,6 +123,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+ALLOWED_HOSTS = ['*']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -138,7 +141,7 @@ CELERY_RESULT_SERUALIZER = 'json'
 CELERY_BEAT_SCHEDULE = {
     'check-active-prices-schedule':{
         'task': 'tracker.tasks.check_all_active_targets',
-        'schedule': crontab(minute='*/1')
+        'schedule': crontab(minute='*/10')
     }
 }
 

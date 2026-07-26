@@ -68,6 +68,17 @@ services:
     depends_on:
       - web
 
+  bot:
+    build: ./bot
+    container_name: price_radar_bot
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - INTERNAL_API_URL=http://web:8000/api/v1
+    depends_on:
+      - web
+
 
 volumes:
   postgres_data:

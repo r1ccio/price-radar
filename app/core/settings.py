@@ -141,7 +141,7 @@ CELERY_RESULT_SERUALIZER = 'json'
 CELERY_BEAT_SCHEDULE = {
     'check-active-prices-schedule':{
         'task': 'tracker.tasks.check_all_active_targets',
-        'schedule': crontab(minute='*/10')
+        'schedule': crontab(minute='*/30')
     }
 }
 

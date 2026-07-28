@@ -3,7 +3,7 @@ import os
 import logging
 import aiohttp
 from aiogram import Bot, Dispatcher, F, types
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandObject, CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-INTERNAL_API_URL = os.getenv("INTERNAl_API_URL", "http://web:8000/api/v1")
+INTERNAL_API_URL = os.getenv("INTERNAL_API_URL", "http://web:8000/api/v1/")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -21,11 +21,29 @@ class AddTarget(StatesGroup):
     waiting_for_price = State()
 
 @dp.message(CommandStart())
-async def handle_start(message: types.Message):
+async def handle_start(message: types.Message, command: CommandObject):
 
+    token = command.args
+
+    if token:
+        await message.answer("Trying to link your account...")
+        payload = {"token": token, "chat_id": str(message.chat.id)}
+        api_endpoint = f"{INTERNAL_API_URL}sync-telegram/"
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(api_endpoint, json=payload) as response:
+                    if response.status == 200:
+                        await message.answer("✅ Your Telegram is succsessfully linked")
+                    else:
+                        await message.answer("❌ Error: invalid or expired link.")
+        except Exception as e:
+            logging.error(f"Sync error: {e}")
+            await message.answer("🔌Error connecting to the Django server")
+        return
     await message.answer(
-        "Hello! I am Price Radar Bot!\n\n"
-        "Soon I will learn to recieve links from you and send them into system for tracking"
+        "Hello! I`m Price Radar bot 🎯\n\n"
+        "Type /add to add item for tracking, or just send me link."
     )
 
 @dp.message(Command("add"))
@@ -66,7 +84,7 @@ async def process_price(message: types.Message, state: FSMContext):
         "telegram_chat_id": str(message.chat.id)
     }
 
-    api_endpoint = f"{INTERNAL_API_URL}/targets/"
+    api_endpoint = f"{INTERNAL_API_URL}targets/"
 
     try:
         async with aiohttp.ClientSession() as session:

@@ -1,10 +1,30 @@
+import uuid
 from django.db import models
-from django.contrib.auth.models import User 
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver 
 
 # Create your models here.
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="User")
+    telegram_chat_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="Telegram Chat ID")
+    sync_token = models.UUIDField(default=uuid.uuid4, unique=True, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "User profile"
+        verbose_name_plural = "User profiles"
+
+    def __str__(self):
+        return f"{self.user.username} Profile"
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
 class Target (models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='targets', verbose_name='User')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='targets', null=True, blank=True, verbose_name='User')
     url = models.URLField(max_length=500, verbose_name='Item URL')
     title = models.CharField(max_length=200, blank=True, verbose_name='Item Title')
     current_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Current Price')

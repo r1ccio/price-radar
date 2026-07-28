@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Target, PriceHistory
+from .models import Target, PriceHistory, UserProfile
 
 # Register your models here.
 
@@ -15,3 +15,5 @@ class PriceHistoryAdmin(admin.ModelAdmin):
     list_display = ('id', 'target', 'price', 'created_at')
     list_filter = ('created_at',)
     readonly_fields = ('created_at',)
+
+admin.site.register(UserProfile)

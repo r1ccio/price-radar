@@ -75,7 +75,7 @@ services:
     env_file:
       - .env
     environment:
-      - INTERNAL_API_URL=http://web:8000/api/v1
+      - INTERNAL_API_URL=http://web:8000/api/v1/
     volumes:
       - ./bot:/usr/src/bot
     depends_on:

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 import uuid
 from .models import Target, PriceHistory, UserProfile
@@ -32,22 +32,25 @@ def sync_telegram(request):
 
 class TargetViewSet(viewsets.ModelViewSet):
 
-    queryset = Target.objects.all()
     serializer_class = TargetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Target.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         chat_id = self.request.data.get('telegram_chat_id')
-        assigned_user = None
+        assigned_user = self.request.user # default to the current authenticated user
 
         if chat_id:
             profile = UserProfile.objects.filter(telegram_chat_id=chat_id).first()
             if profile:
                 assigned_user = profile.user
 
-        serializer.save(user=assigned_user)
+        # serializer.save(user=assigned_user)
         # on target creation set the user to the current authenticated user, else set it to the first user in db (testing purposes) 
-        user = self.request.user if self.request.user.is_authenticated else User.objects.first()
-        target = serializer.save(user=user)
+        # user = self.request.user if self.request.user.is_authenticated else User.objects.first()
+        target = serializer.save(user=assigned_user)
         parse_target_price.delay(target.id)
 
 
@@ -57,3 +60,7 @@ class PriceHistoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = PriceHistory.objects.all()
     serializer_class = PriceHistorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return PriceHistory.objects.filter(target__user=self.request.user)

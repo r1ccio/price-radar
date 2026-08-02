@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'tracker',
 ]
 
@@ -147,3 +148,20 @@ CELERY_BEAT_SCHEDULE = {
 
 # Telegram settings
 TELEGRAM_BOT_TOKEN=os.environ.get('TELEGRAM_BOT_TOKEN', '')
+
+# DRF & JWT CONFIGURATION
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated'
+    ],
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'AUTH_HEADERS_TYPES': ('Bearer',),
+}

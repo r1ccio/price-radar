@@ -39,11 +39,39 @@ def test_data():
     </html>
     """
 
+    html_with_meta = """
+        <html>
+            <head>
+                <title>Samsung Galaxy S24</title>
+                <meta property="og:price:amount" content ="35550.50">
+            </head>
+            <body>
+                <h1>Product Page</h1>
+            </body>
+        </html>
+        """
+
+    html_with_regex = """
+        <html>
+            <head>
+                <title>Sony PlayStation 5</title>
+            </head>
+            <body>
+                <div>
+                    <del class="old-price">18 000 грн</del>
+                    <div class="product-price-val">16 500,00 грн</div>
+                </div>
+            </body>
+        </html>
+        """
+
     html_empty = "<html><head><title>No Price</title></head><body><h1>Empty</h1></body></html>"
 
     return {
         "target": target,
         "html_with_json_ld": html_with_json_ld,
+        "html_with_meta": html_with_meta,
+        "html_with_regex": html_with_regex,
         "html_empty": html_empty
     }
 
@@ -51,7 +79,7 @@ def test_data():
 
 @pytest.mark.django_db
 @patch('tracker.tasks.fetch_html_with_playwright')
-def test_parse_target_price_success(mock_fetch, test_data):
+def test_parse_target_price_json_ld(mock_fetch, test_data):
     mock_fetch.return_value = test_data["html_with_json_ld"]
     target = test_data["target"]
 
@@ -61,7 +89,35 @@ def test_parse_target_price_success(mock_fetch, test_data):
     assert target.current_price == 39999.0
     assert target.title == "Apple iPhone 15"
     assert PriceHistory.objects.filter(target=target, price=39999.0).exists()
-    assert "Successfully updated Target in result"
+    assert "Successfully updated Target" in result
+
+@pytest.mark.django_db
+@patch('tracker.tasks.fetch_html_with_playwright')
+def test_parse_target_price_meta(mock_fetch, test_data):
+    mock_fetch.return_value = test_data["html_with_meta"]
+    target = test_data["target"]
+
+    result = parse_target_price(target.id)
+    target.refresh_from_db()
+
+    assert target.current_price == 35550.50
+    assert target.title == "Samsung Galaxy S24"
+    assert PriceHistory.objects.filter(target=target, price=35550.50).exists()
+    assert "Successfully updated Target" in result
+
+@pytest.mark.django_db
+@patch('tracker.tasks.fetch_html_with_playwright')
+def test_parse_target_price_regex(mock_fetch, test_data):
+    mock_fetch.return_value = test_data["html_with_regex"]
+    target = test_data["target"]
+
+    result = parse_target_price(target.id)
+    target.refresh_from_db()
+
+    assert target.current_price == 16500.00
+    assert target.title == "Sony PlayStation 5"
+    assert PriceHistory.objects.filter(target=target, price=16500.00).exists()
+    assert "Successfully updated Target" in result   
 
 @pytest.mark.django_db
 @patch('tracker.tasks.fetch_html_with_playwright')

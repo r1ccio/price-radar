@@ -1,16 +1,16 @@
 import json
 import logging
-from curl_cffi import requests
+import re
 from bs4 import BeautifulSoup
 from celery import shared_task
 from playwright.sync_api import sync_playwright
-from django.utils import timezone
 from django.conf import settings
 from .models import Target, PriceHistory
 
 logger = logging.getLogger(__name__)
 
 def send_telegram_notification(chat_id, title, url, current_price, target_price):
+    import requests
     token = settings.TELEGRAM_BOT_TOKEN
     if not token or not chat_id:
         return False
@@ -76,19 +76,6 @@ def parse_target_price(target_id):
         return f"Could not fetch HTML for Target #{target.id}"
 
     soup = BeautifulSoup(html_content, 'html.parser')
-    
-    
-#     # headers = {
-#     #     'User_Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-#     #     }
-    
-#     try: 
-#         response = requests.get(target.url, impersonate="chrome120", timeout=15)
-#         response.raise_for_status()
-#     except requests.RequestException as e:
-#         return f"Error Fetching {target.url}: {str(e)}"
-    
-    soup = BeautifulSoup(html_content, 'html.parser')
 
     if not target.title:
         title_tag = soup.find('title')
@@ -96,9 +83,9 @@ def parse_target_price(target_id):
             target.title = title_tag.text.strip()[:255]
     
     price = None
-#     parsing_method = None
+    parsing_method = None
 
-# # Parsing stage 1: JSON-LD
+    # Parsing stage 1: JSON-LD
 
     scripts = soup.find_all('script', type='application/ld+json')
     for script in scripts:
@@ -123,75 +110,67 @@ def parse_target_price(target_id):
 
 # # Parsing stage 2: Beautifulsoup
 
-#     if not price:
+    if not price:
 
-#         meta_tags = [
-#             {'property': 'product:price:amount'},
-#             {'itemprop': 'price'},
-#             {'property': 'og:price:amount'}
-#         ]
+        meta_tags = [
+            {'property': 'product:price:amount'},
+            {'itemprop': 'price'},
+            {'property': 'og:price:amount'}
+        ]
 
-#         for tag_attrs in meta_tags:
-#             meta_price = soup.find('meta', tag_attrs)
-#             if meta_price and meta_price.get('content'):
-#                 try:
-#                     price = float(meta_price['content'].replace(',', '.'))
-#                     parsing_method = f"Meta ({list(tag_attrs.values())[0]})"
-#                     logger.info(f"[Target #{target.id} Price was found with {parsing_method}]")
-#                     break
-#                 except ValueError:
-#                     continue
-             
+        for tag_attrs in meta_tags:
+            meta_price = soup.find('meta', tag_attrs)
+            if meta_price and meta_price.get('content'):
+                try:
+                    price = float(meta_price['content'].replace(',', '.'))
+                    parsing_method = f"Meta ({list(tag_attrs.values())[0]})"
+                    logger.info(f"[Target #{target.id} Price was found with {parsing_method}]")
+                    break
+                except ValueError:
+                    continue
 
-    
-#         # if meta_price and meta_price.get('content'):
-#         #     try:
-#         #         price = float(meta_price['content'].replace(',', '.'))
-#         #         parsing_method = "Meta/OpenGraph"
-#         #         logger.info(f"[Target #{target.id} Price was found with {parsing_method}]")
-#         #     except ValueError:
-#         #         pass
-
-# # Parsing stage 3: Regex
+    # Parsing stage 3: Universal Smart Regex
             
-#     if not price:
-#         price_elements = soup.find_all(re.compile(r'^(span|div|p|h[1-6])$'), class_=re.compile(r'(price|cost|val)', re.I))
+    if not price:
+        price_elements = soup.find_all(re.compile(r'^(span|div|p|h[1-6])$'), class_=re.compile(r'(price|cost|val)', re.I))
 
-#         stop_words = ['delivery', 'credit', 'month', 'installment', 'part', 'shipping', 'old', 'prev', 'base', 'regular']
+        stop_words = ['delivery', 'credit', 'month', 'installment', 'part', 'shipping', 'old', 'prev', 'base', 'regular']
 
-#         potential_prices = []
+        potential_prices = []
 
-#         for el in price_elements:
-#             if el.find(class_=re.compile(r'(price|cost|val)', re.I)):
-#                 continue
+        for el in price_elements:
+            if el.find(class_=re.compile(r'(price|cost|val)', re.I)):
+                continue
 
-#             if el.name in ['del', 's', 'strike'] or el.find_parent(['del', 's', 'strike']):
-#                 continue
+            if el.name in ['del', 's', 'strike'] or el.find_parent(['del', 's', 'strike']):
+                continue
 
-#             classes = " ".join(el.get('class', [])).lower()
-#             if any(word in classes for word in stop_words):
-#                 continue
+            classes = " ".join(el.get('class', [])).lower()
+            if any(word in classes for word in stop_words):
+                continue
 
-#             match = re.search(r'(\d+[\d\s\xa0]*[,.]?\d*)', el.text)
-#             if match:
-#                 clean_num = match.group(1).replace(' ', '').replace(',', '.')
-#                 try:
-#                     found_price = float(clean_num)
-#                     if found_price > 0:
-#                         potential_prices.append(found_price)
-#                 except ValueError:
-#                     continue
+            match = re.search(r'(\d+[\d\s\xa0]*[,.]?\d*)', el.text)
+            if match:
+                clean_num = match.group(1).replace(' ', '').replace(',', '.')
+                try:
+                    found_price = float(clean_num)
+                    if found_price > 0:
+                        potential_prices.append(found_price)
+                except ValueError:
+                    continue
 
-#         if potential_prices:
-#             top_prices = potential_prices[:5]
-#             max_found = max(top_prices)
+        if potential_prices:
+            top_prices = potential_prices[:5]
+            max_found = max(top_prices)
 
-#             valid_prices = [p for p in top_prices if p >= max_found * 0.3]
+            valid_prices = [p for p in top_prices if p >= max_found * 0.3]
 
-#             if valid_prices:
-#                 price = min(valid_prices)
-#                 parsing_method = "Universal Smart Regex"
-#                 logger.info(f"[Target #{target.id} Price was found with {parsing_method}]")
+            if valid_prices:
+                price = min(valid_prices)
+                parsing_method = "Universal Smart Regex"
+                logger.info(f"[Target #{target.id} Price was found with {parsing_method}]")
+
+    # Final Stage: Save & Notify
 
     if price:
         logger.info(f"[Target #{target.id} successfully updated: {price} (via {parsing_method})]")
@@ -220,7 +199,7 @@ def parse_target_price(target_id):
                     target_price=target.target_price
                 )
 
-        return f"SuccessFully updated Target #{target.id}: new price is {price}"
+        return f"Successfully updated Target #{target.id}: new price is {price}"
     
     if target.title:
         target.save(update_fields=['title', 'updated_at'])

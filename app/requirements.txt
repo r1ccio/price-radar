@@ -13,4 +13,5 @@ playwright==1.45.0
 pytest==8.2.0
 pytest-django==4.8.0
 djangorestframework-simplejwt==5.3.1
+drf-spectacular==0.27.1
  

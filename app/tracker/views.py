@@ -1,15 +1,27 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 import uuid
 from .models import Target, PriceHistory, UserProfile
-from .serializers import TargetSerializer, PriceHistorySerializer
+from .serializers import TargetSerializer, PriceHistorySerializer, UserRegistrationSerializer, UserSerializer
 from .tasks import parse_target_price
 
 # Create your views here.
+
+class UserRegistrationView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
+
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

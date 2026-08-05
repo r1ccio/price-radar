@@ -10,6 +10,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="User")
     telegram_chat_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="Telegram Chat ID")
     sync_token = models.UUIDField(default=uuid.uuid4, unique=True, null=True, blank=True)
+    fcm_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="FCM Token")
 
     class Meta:
         verbose_name = "User profile"
@@ -40,7 +41,7 @@ class Target (models.Model):
         verbose_name_plural = 'Targets'
         ordering = ['-created_at']
 
-    def __str__(self):
+    def __str__(self):        
         return self.title or f"Target #{self.id} -{self.url[:30]}..."
     
 class PriceHistory(models.Model):

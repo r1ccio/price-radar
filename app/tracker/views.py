@@ -23,6 +23,14 @@ class UserProfileView(generics.RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
+    def patch(self, request, *args, **kwargs):
+        profile = request.user.profile
+        fcm_token = request.data.get('fcm_token')
+        if fcm_token is not None:
+            profile.fcm_token = fcm_token
+            profile.save(update_fields=['fcm_token'])
+        return self.retrieve(request, *args, **kwargs)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def sync_telegram(request):

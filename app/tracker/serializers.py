@@ -20,7 +20,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ['telegram_chat_id', 'sync_token']
+        fields = ['telegram_chat_id', 'sync_token', 'fcm_token']
         read_only_fields = ['sync_token']
 
 class UserSerializer(serializers.ModelSerializer):

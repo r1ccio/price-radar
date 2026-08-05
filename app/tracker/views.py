@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -54,6 +54,10 @@ class TargetViewSet(viewsets.ModelViewSet):
 
     serializer_class = TargetSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'url']
+    ordering_fields = ['created_at', 'updated_at', 'current_price', 'target_price']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         return Target.objects.filter(user=self.request.user)

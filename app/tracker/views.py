@@ -2,14 +2,24 @@ from django.shortcuts import render
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from django.contrib.auth.models import User
+from django.conf import settings
 import uuid
 from .models import Target, PriceHistory, UserProfile
 from .serializers import TargetSerializer, PriceHistorySerializer, UserRegistrationSerializer, UserSerializer
 from .tasks import parse_target_price
 
 # Create your views here.
+
+class IsBotOrAuthenticated(BasePermission):
+    def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated:
+            return True
+        bot_token = request.headers.get('X-Bot_Token')
+        if bot_token and bot_token == settings.TELEGRAM_BOT_TOKEN:
+            return True
+        return False
 
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -53,13 +63,15 @@ def sync_telegram(request):
 class TargetViewSet(viewsets.ModelViewSet):
 
     serializer_class = TargetSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsBotOrAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'url']
     ordering_fields = ['created_at', 'updated_at', 'current_price', 'target_price']
     ordering = ['-created_at']
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Target.objects.none()
         return Target.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -75,6 +87,7 @@ class TargetViewSet(viewsets.ModelViewSet):
         # on target creation set the user to the current authenticated user, else set it to the first user in db (testing purposes) 
         # user = self.request.user if self.request.user.is_authenticated else User.objects.first()
         target = serializer.save(user=assigned_user)
+        from .tasks import parse_target_price
         parse_target_price.delay(target.id)
 
 

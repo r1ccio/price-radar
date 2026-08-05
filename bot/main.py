@@ -81,14 +81,18 @@ async def process_price(message: types.Message, state: FSMContext):
     payload = {
         "url": url,
         "target_price": str(target_price),
-        "telegram_chat_id": str(message.chat.id)
+        "telegram_chat_id": str(message.chat.id),
     }
 
     api_endpoint = f"{INTERNAL_API_URL}targets/"
 
+    headers = {
+        "X-Bot_Token": TOKEN        
+    }
+
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(api_endpoint, json=payload) as response:
+            async with session.post(api_endpoint, json=payload, headers=headers) as response:
                 if response.status == 201:
                     await message.answer(
                         f"✅ Item successfully added!\n\n"
